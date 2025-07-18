@@ -241,7 +241,7 @@ export class GeminiClient {
       const userMemory = this.config.getUserMemory();
       const systemInstruction = getCoreSystemPrompt(userMemory);
       const generateContentConfigWithThinking = isThinkingSupported(
-        this.config.getModel(),
+        this.config.getModel({ prompt: '' }),
       )
         ? {
             ...this.generateContentConfig,
@@ -307,7 +307,8 @@ export class GeminiClient {
     }
 
     // Track the original model from the first call to detect model switching
-    const initialModel = originalModel || this.config.getModel();
+    const initialModel =
+      originalModel || this.config.getModel({ prompt: request.toString() });
 
     const compressed = await this.tryCompressChat(prompt_id);
 
@@ -381,7 +382,11 @@ This is the cursor position in the file:
   ): Promise<Record<string, unknown>> {
     // Use current model from config instead of hardcoded Flash model
     const modelToUse =
-      model || this.config.getModel() || DEFAULT_GEMINI_FLASH_MODEL;
+      model ||
+      this.config.getModel({
+        prompt: contents.map((c) => c.parts?.toString() || '').join('\n'),
+      }) ||
+      DEFAULT_GEMINI_FLASH_MODEL;
     try {
       const userMemory = this.config.getUserMemory();
       const systemInstruction = getCoreSystemPrompt(userMemory);
@@ -469,7 +474,11 @@ This is the cursor position in the file:
     abortSignal: AbortSignal,
     model?: string,
   ): Promise<GenerateContentResponse> {
-    const modelToUse = model ?? this.config.getModel();
+    const modelToUse =
+      model ??
+      this.config.getModel({
+        prompt: contents.map((c) => c.parts?.toString() || '').join('\n'),
+      });
     const configToUse: GenerateContentConfig = {
       ...this.generateContentConfig,
       ...generationConfig,
@@ -564,7 +573,11 @@ This is the cursor position in the file:
       return null;
     }
 
-    const model = this.config.getModel();
+    const model = this.config.getModel({
+      prompt: curatedHistory
+        .map((c) => c.parts?.toString() || '')
+        .join('\n'),
+    });
 
     const { totalTokens: originalTokenCount } =
       await this.getContentGenerator().countTokens({

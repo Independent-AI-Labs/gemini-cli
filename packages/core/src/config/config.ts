@@ -45,6 +45,7 @@ import {
   DEFAULT_GEMINI_FLASH_MODEL,
 } from './models.js';
 import { ClearcutLogger } from '../telemetry/clearcut-logger/clearcut-logger.js';
+import { ModelRouter } from '../routing/router.js';
 
 export enum ApprovalMode {
   DEFAULT = 'default',
@@ -143,6 +144,7 @@ export interface ConfigParameters {
   fileDiscoveryService?: FileDiscoveryService;
   bugCommand?: BugCommandSettings;
   model: string;
+  modelRoutingRulesPath?: string;
   extensionContextFilePaths?: string[];
   maxSessionTurns?: number;
   experimentalAcp?: boolean;
@@ -188,6 +190,8 @@ export class Config {
   private readonly cwd: string;
   private readonly bugCommand: BugCommandSettings | undefined;
   private readonly model: string;
+  private readonly modelRoutingRulesPath?: string;
+  private modelRouter?: ModelRouter;
   private readonly extensionContextFilePaths: string[];
   private readonly noBrowser: boolean;
   private readonly ideMode: boolean;
@@ -241,6 +245,7 @@ export class Config {
     this.fileDiscoveryService = params.fileDiscoveryService ?? null;
     this.bugCommand = params.bugCommand;
     this.model = params.model;
+    this.modelRoutingRulesPath = params.modelRoutingRulesPath;
     this.extensionContextFilePaths = params.extensionContextFilePaths ?? [];
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
     this.experimentalAcp = params.experimentalAcp ?? false;
@@ -274,6 +279,11 @@ export class Config {
       await this.getGitService();
     }
     this.toolRegistry = await this.createToolRegistry();
+
+    if (this.modelRoutingRulesPath) {
+      this.modelRouter = new ModelRouter(this.modelRoutingRulesPath);
+      await this.modelRouter.initialize();
+    }
   }
 
   async refreshAuth(authMethod: AuthType) {
@@ -297,7 +307,14 @@ export class Config {
     return this.contentGeneratorConfig;
   }
 
-  getModel(): string {
+  getModel(context?: { prompt: string }): string {
+    if (this.modelRouter && context) {
+      const modelSpec = this.modelRouter.getModel(context);
+      if (modelSpec) {
+        // TODO: Handle provider selection
+        return modelSpec.model;
+      }
+    }
     return this.contentGeneratorConfig?.model || this.model;
   }
 
