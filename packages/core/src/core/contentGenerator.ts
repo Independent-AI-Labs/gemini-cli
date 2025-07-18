@@ -43,6 +43,7 @@ export enum AuthType {
   USE_GEMINI = 'gemini-api-key',
   USE_VERTEX_AI = 'vertex-ai',
   USE_LOCAL = 'local',
+  USE_LLAMA_CPP = 'llama-cpp',
   CLOUD_SHELL = 'cloud-shell',
 }
 
@@ -93,7 +94,14 @@ export function createContentGeneratorConfig(
   }
 
   if (authType === AuthType.USE_LOCAL) {
-    contentGeneratorConfig.apiKey = process.env.LOCAL_API_KEY || 'ollama';
+    contentGeneratorConfig.apiKey = process.env.LOCAL_API_KEY;
+    contentGeneratorConfig.vertexai = false;
+
+    return contentGeneratorConfig;
+  }
+
+  if (authType === AuthType.USE_LLAMA_CPP) {
+    contentGeneratorConfig.apiKey = 'llama-cpp';
     contentGeneratorConfig.vertexai = false;
 
     return contentGeneratorConfig;
@@ -138,7 +146,8 @@ export async function createContentGenerator(
   if (
     config.authType === AuthType.USE_GEMINI ||
     config.authType === AuthType.USE_VERTEX_AI ||
-    config.authType === AuthType.USE_LOCAL
+    config.authType === AuthType.USE_LOCAL ||
+    config.authType === AuthType.USE_LLAMA_CPP
   ) {
     const googleGenAI = new GoogleGenAI({
       apiKey: config.apiKey === '' ? undefined : config.apiKey,

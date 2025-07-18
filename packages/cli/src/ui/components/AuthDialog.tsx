@@ -78,6 +78,7 @@ export function AuthDialog({
     },
     { label: 'Vertex AI', value: AuthType.USE_VERTEX_AI },
     { label: 'Local (e.g. Ollama)', value: AuthType.USE_LOCAL },
+    { label: 'Llama.cpp Server', value: AuthType.USE_LLAMA_CPP },
   ];
 
   const initialAuthIndex = items.findIndex((item) => {

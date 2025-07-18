@@ -24,7 +24,14 @@ export const validateAuthMethod = (authMethod: string): string | null => {
   }
 
   if (authMethod === AuthType.USE_LOCAL) {
-    // Local endpoints do not require an API key.
+    if (!process.env.LOCAL_API_KEY) {
+      return 'LOCAL_API_KEY environment variable not found. Add that to your environment and try again (no reload needed if using .env)!';
+    }
+    return null;
+  }
+
+  if (authMethod === AuthType.USE_LLAMA_CPP) {
+    // Llama.cpp server does not require an API key.
     return null;
   }
 

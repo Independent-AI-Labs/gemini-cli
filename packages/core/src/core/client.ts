@@ -259,6 +259,9 @@ export class GeminiClient {
       if (contentGeneratorConfig?.authType === AuthType.USE_LOCAL) {
         startChatParams.baseURL =
           process.env.LOCAL_API_BASE_URL || 'http://localhost:11434/v1/';
+      } else if (contentGeneratorConfig?.authType === AuthType.USE_LLAMA_CPP) {
+        startChatParams.baseURL =
+          process.env.LLAMACPP_API_BASE_URL || 'http://localhost:8080/v1/';
       }
 
       return new GeminiChat(
