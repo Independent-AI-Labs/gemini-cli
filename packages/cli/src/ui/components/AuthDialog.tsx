@@ -77,6 +77,7 @@ export function AuthDialog({
       value: AuthType.USE_GEMINI,
     },
     { label: 'Vertex AI', value: AuthType.USE_VERTEX_AI },
+    { label: 'Local (e.g. Ollama)', value: AuthType.USE_LOCAL },
   ];
 
   const initialAuthIndex = items.findIndex((item) => {

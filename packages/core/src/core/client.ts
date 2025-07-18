@@ -250,13 +250,23 @@ export class GeminiClient {
             },
           }
         : this.generateContentConfig;
+      const contentGeneratorConfig = this.config.getContentGeneratorConfig();
+      const startChatParams: GenerateContentConfig & { baseURL?: string } = {
+        ...generateContentConfigWithThinking,
+        tools,
+      };
+
+      if (contentGeneratorConfig?.authType === AuthType.USE_LOCAL) {
+        startChatParams.baseURL =
+          process.env.LOCAL_API_BASE_URL || 'http://localhost:11434/v1/';
+      }
+
       return new GeminiChat(
         this.config,
         this.getContentGenerator(),
         {
           systemInstruction,
-          ...generateContentConfigWithThinking,
-          tools,
+          ...startChatParams,
         },
         history,
       );
