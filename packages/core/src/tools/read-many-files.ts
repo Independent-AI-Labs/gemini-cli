@@ -65,6 +65,11 @@ export interface ReadManyFilesParams {
    * Optional. Whether to respect .gitignore patterns. Defaults to true.
    */
   respect_git_ignore?: boolean;
+
+  /**
+   * Whether to use the local LLM to process the file content
+   */
+  use_local_llm?: boolean;
 }
 
 /**
@@ -179,6 +184,11 @@ export class ReadManyFilesTool extends BaseTool<
             'Optional. Whether to respect .gitignore patterns when discovering files. Only available in git repositories. Defaults to true.',
           default: true,
         },
+        use_local_llm: {
+          description:
+            'Optional: Whether to use the local LLM to process the file content. Defaults to false.',
+          type: Type.BOOLEAN,
+        },
       },
       required: ['paths'],
     };
@@ -258,7 +268,12 @@ Use this tool when the user's query implies needing the content of several files
       exclude = [],
       useDefaultExcludes = true,
       respect_git_ignore = true,
+      use_local_llm = false,
     } = params;
+
+    if (use_local_llm) {
+      return this.processWithLocalLlm(params);
+    }
 
     const respectGitIgnore =
       respect_git_ignore ?? this.config.getFileFilteringRespectGitIgnore();
@@ -454,5 +469,31 @@ Use this tool when the user's query implies needing the content of several files
       llmContent: contentParts,
       returnDisplay: displayMessage.trim(),
     };
+  }
+
+  private async processWithLocalLlm(
+    params: ReadManyFilesParams,
+  ): Promise<ToolResult> {
+    const result = await this.execute(
+      { ...params, use_local_llm: false },
+      new AbortController().signal,
+    );
+
+    const llamaTool = (await this.config.getToolRegistry()).getTool(
+      'llama_cpp',
+    );
+    if (!llamaTool) {
+      return {
+        llmContent: 'Error: LlamaCppTool not found.',
+        returnDisplay: 'Error: LlamaCppTool not found.',
+      };
+    }
+
+    return llamaTool.execute(
+      {
+        input: JSON.stringify(result.llmContent),
+      },
+      new AbortController().signal,
+    );
   }
 }

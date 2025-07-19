@@ -28,6 +28,7 @@ import {
   GEMINI_CONFIG_DIR as GEMINI_DIR,
 } from '../tools/memoryTool.js';
 import { WebSearchTool } from '../tools/web-search.js';
+import { LlamaCppTool } from '../tools/llama.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -115,6 +116,7 @@ export type FlashFallbackHandler = (
 export interface ConfigParameters {
   sessionId: string;
   embeddingModel?: string;
+  llamaCppServerAddress?: string;
   sandbox?: SandboxConfig;
   targetDir: string;
   debugMode: boolean;
@@ -205,11 +207,13 @@ export class Config {
     | Record<string, SummarizeToolOutputSettings>
     | undefined;
   private readonly experimentalAcp: boolean = false;
+  private readonly llamaCppServerAddress: string | undefined;
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
     this.embeddingModel =
       params.embeddingModel ?? DEFAULT_GEMINI_EMBEDDING_MODEL;
+    this.llamaCppServerAddress = params.llamaCppServerAddress;
     this.sandbox = params.sandbox;
     this.targetDir = path.resolve(params.targetDir);
     this.debugMode = params.debugMode;
@@ -540,6 +544,10 @@ export class Config {
     return this.ideMode;
   }
 
+  getLlamaCppServerAddress(): string | undefined {
+    return this.llamaCppServerAddress;
+  }
+
   async getGitService(): Promise<GitService> {
     if (!this.gitService) {
       this.gitService = new GitService(this.targetDir);
@@ -609,6 +617,7 @@ export class Config {
     registerCoreTool(ShellTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(WebSearchTool, this);
+    registerCoreTool(LlamaCppTool, this);
 
     await registry.discoverTools();
     return registry;

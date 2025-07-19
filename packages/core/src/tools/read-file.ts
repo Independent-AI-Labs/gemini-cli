@@ -38,6 +38,11 @@ export interface ReadFileToolParams {
    * The number of lines to read (optional)
    */
   limit?: number;
+
+  /**
+   * Whether to use the local LLM to process the file content
+   */
+  use_local_llm?: boolean;
 }
 
 /**
@@ -68,6 +73,11 @@ export class ReadFileTool extends BaseTool<ReadFileToolParams, ToolResult> {
             description:
               "Optional: For text files, maximum number of lines to read. Use with 'offset' to paginate through large files. If omitted, reads the entire file (if feasible, up to a default limit).",
             type: Type.NUMBER,
+          },
+          use_local_llm: {
+            description:
+              'Optional: Whether to use the local LLM to process the file content. Defaults to false.',
+            type: Type.BOOLEAN,
           },
         },
         required: ['absolute_path'],
@@ -135,6 +145,10 @@ export class ReadFileTool extends BaseTool<ReadFileToolParams, ToolResult> {
       };
     }
 
+    if (params.use_local_llm) {
+      return this.processWithLocalLlm(params);
+    }
+
     const result = await processSingleFileContent(
       params.absolute_path,
       this.config.getTargetDir(),
@@ -166,5 +180,40 @@ export class ReadFileTool extends BaseTool<ReadFileToolParams, ToolResult> {
       llmContent: result.llmContent,
       returnDisplay: result.returnDisplay,
     };
+  }
+
+  private async processWithLocalLlm(
+    params: ReadFileToolParams,
+  ): Promise<ToolResult> {
+    const result = await processSingleFileContent(
+      params.absolute_path,
+      this.config.getTargetDir(),
+      params.offset,
+      params.limit,
+    );
+
+    if (result.error) {
+      return {
+        llmContent: result.error,
+        returnDisplay: result.returnDisplay,
+      };
+    }
+
+    const llamaTool = (await this.config.getToolRegistry()).getTool(
+      'llama_cpp',
+    );
+    if (!llamaTool) {
+      return {
+        llmContent: 'Error: LlamaCppTool not found.',
+        returnDisplay: 'Error: LlamaCppTool not found.',
+      };
+    }
+
+    return llamaTool.execute(
+      {
+        input: result.llmContent as string,
+      },
+      new AbortController().signal,
+    );
   }
 }
